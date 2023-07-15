@@ -1,0 +1,45 @@
+# This is a basic workflow to help you get started with Actions
+
+name: build
+
+# git push --tags 执行时候进行编译
+on:
+  push:
+    tags:
+      - v*
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build-and-release-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.10.3
+          channel: stable
+      - name: Install project dependencies
+        run: flutter pub get
+      - name: Generate intermediates
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+      - name: Enable windows build
+        run: flutter config --enable-windows-desktop
+      - name: Build artifacts
+        run: flutter build windows --release
+      - name: Archive Release
+        uses: thedoctor0/zip-release@master
+        with:
+          type: "zip"
+          filename: AnBackup-${{github.ref_name}}-windows.zip
+          directory: build/windows/runner/Release
+      # 发布安装包
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: "build/windows/runner/Release/AnBackup-${{github.ref_name}}-windows.zip"
+      - name: Release Packages
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "build/windows/runner/Release/AnBackup-${{github.ref_name}}-windows.zip"
+          allowUpdates: true
